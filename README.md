@@ -1,3 +1,22 @@
+# PG-GAN improved-diffusion
+Remember to copy 1000genome data to directory, do something like:
+```
+cp /path/to/data/CHB.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.h5 .
+cp /path/to/data/20120824_strict_mask.bed .
+```
+
+To run:
+```
+sh init.sh
+```
+
+To run with pg-gan dataset, set `USE_PG` in `improved_diffusion/image_train.py` as `True`
+
+To change the architecture of network to 2 channel, set `INOUTCHANNEL` in `improved_diffusion/script_util.py` as `2`
+
+To change the kernel of network to (1,5), set `kernel` in `improved_diffusion/unet.py` as `(1,5)`
+
+
 # improved-diffusion
 
 This is the codebase for [Improved Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2102.09672).
