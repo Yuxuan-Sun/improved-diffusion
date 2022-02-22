@@ -21,7 +21,7 @@ print("NUM_SNPS", NUM_SNPS)
 
 
 
-def load_data(
+def pg_load_data(
     data_h5, bed, batch_size, frac_test=None, \
         chrom_starts=False):
 
@@ -246,19 +246,21 @@ class PGDataset(Dataset):
     def real_batch(self, batch_size, neg1=True, region_len=False):
         """Use region_len=True for fixed region length, not by SNPs"""
 
-        if not region_len:
-            regions = np.zeros((batch_size, self.num_samples, self.S, 2), \
-                dtype=np.float32)
+        # if not region_len:
+        #     regions = np.zeros((batch_size, self.num_samples, self.S, 2), \
+        #         dtype=np.float32)
 
-            for i in range(batch_size):
-                regions[i] = self.real_region(neg1, region_len)
+        #     for i in range(batch_size):
+        #         regions[i] = self.real_region(neg1, region_len)
 
-        else:
-            regions = []
-            for i in range(batch_size):
-                regions.append(self.real_region(neg1, region_len))
+        # else:
+        #     regions = []
+        #     for i in range(batch_size):
+        #         regions.append(self.real_region(neg1, region_len))
 
-        return regions
+        return self.real_region(neg1, region_len)
+
+        # return regions
 
     def real_chrom(self, chrom, samples):
         """Mostly used for msmc - gather all data for a given chrom int"""
@@ -285,7 +287,10 @@ class PGDataset(Dataset):
     def __getitem__(self, idx):
         neg1=True
         region_len=False
-        out = self.real_region(neg1, region_len)
-        out = tf.transpose(out, [0, 3, 1, 2])
+        out = self.real_batch(1, True)
+        # print("originalshape",out.shape)
+        newOut = tf.transpose(out, perm=[2,0,1])
+        newOut = newOut.numpy()
         out_dict = {}
-        return out, out_dict
+        # print("outputshape",newOut.shape)
+        return newOut, out_dict

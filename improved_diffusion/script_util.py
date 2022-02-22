@@ -6,6 +6,7 @@ from .respace import SpacedDiffusion, space_timesteps
 from .unet import SuperResModel, UNetModel
 
 NUM_CLASSES = 1000
+INOUTCHANNEL = 3
 
 
 def model_and_diffusion_defaults():
@@ -110,9 +111,10 @@ def create_model(
         attention_ds.append(image_size // int(res))
 
     return UNetModel(
-        in_channels=3,
+        # in_channels=3,
+        in_channels = INOUTCHANNEL,
         model_channels=num_channels,
-        out_channels=(3 if not learn_sigma else 6),
+        out_channels=(INOUTCHANNEL if not learn_sigma else 6),
         num_res_blocks=num_res_blocks,
         attention_resolutions=tuple(attention_ds),
         dropout=dropout,
@@ -212,9 +214,9 @@ def sr_create_model(
         attention_ds.append(large_size // int(res))
 
     return SuperResModel(
-        in_channels=3,
+        in_channels=INOUTCHANNEL,
         model_channels=num_channels,
-        out_channels=(3 if not learn_sigma else 6),
+        out_channels=(INOUTCHANNEL if not learn_sigma else 6),
         num_res_blocks=num_res_blocks,
         attention_resolutions=tuple(attention_ds),
         dropout=dropout,

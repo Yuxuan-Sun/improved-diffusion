@@ -95,6 +95,7 @@ class TrainLoop:
             ]
 
         if th.cuda.is_available():
+            print("using DDP:",dist_util.dev())
             self.use_ddp = True
             self.ddp_model = DDP(
                 self.model,
@@ -166,6 +167,7 @@ class TrainLoop:
             or self.step + self.resume_step < self.lr_anneal_steps
         ):
             batch, cond = next(self.data)
+            print("batch", batch.shape)
             self.run_step(batch, cond)
             if self.step % self.log_interval == 0:
                 logger.dumpkvs()
@@ -189,7 +191,12 @@ class TrainLoop:
 
     def forward_backward(self, batch, cond):
         zero_grad(self.model_params)
+        print("batchshape",batch.shape)
+        print("batchshape0",batch.shape[0])
+        print("microbatch",self.microbatch)
+        print("model",self.model)
         for i in range(0, batch.shape[0], self.microbatch):
+            # micro = batch[i : i + self.microbatch]
             micro = batch[i : i + self.microbatch].to(dist_util.dev())
             micro_cond = {
                 k: v[i : i + self.microbatch].to(dist_util.dev())
