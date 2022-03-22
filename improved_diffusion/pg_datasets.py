@@ -22,13 +22,14 @@ print("NUM_SNPS", NUM_SNPS)
 
 
 def pg_load_data(
-    data_h5, bed, batch_size, frac_test=None, \
+    data_h5, bed, batch_size, cut32=False, frac_test=None, \
         chrom_starts=False):
 
     dataset = PGDataset(
         S=NUM_SNPS,
         filename=data_h5,
         bed_file=bed,
+        cut32=cut32,
     )
     loader = DataLoader(
         dataset, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True
@@ -148,7 +149,7 @@ def binary_search(q, lst):
 
 class PGDataset(Dataset):
 
-    def __init__(self, S, filename, bed_file, frac_test=None, \
+    def __init__(self, S, filename, bed_file, cut32 = False, frac_test=None, \
         chrom_starts=False):
         callset = h5py.File(filename, mode='r')
         # output: ['GT'] ['CHROM', 'POS']
@@ -172,6 +173,8 @@ class PGDataset(Dataset):
         self.num_snps = len(self.pos_all) # total for all chroms
 
         self.mask_dict = read_mask(bed_file) # mask
+
+        self.cut32 = cut32
 
         # useful for fastsimcoal and msmc
         if chrom_starts:
@@ -288,9 +291,20 @@ class PGDataset(Dataset):
         neg1=True
         region_len=False
         out = self.real_batch(1, True)
+        if self.cut32: out = out[:32,:32,:]
         # print("originalshape",out.shape)
-        newOut = tf.transpose(out, perm=[2,0,1])
-        newOut = newOut.numpy()
+        newOut = np.transpose(out, [2, 0, 1])
+        # newOut = tf.transpose(out, perm=[2,0,1])
+        # newOut = newOut.numpy()
+
+        # ------- make a third channel --------
+        # third = []
+        # third.append(newOut[0])
+        # newOut = np.concatenate((newOut,third),axis=0)
+
+        # for x in np.nditer(newOut, op_flags=['readwrite']):
+        #     x[...] = np.round(0.5* np.round(x,1),1)
+        newOut = newOut.astype(np.float32)
         out_dict = {}
         # print("outputshape",newOut.shape)
         return newOut, out_dict

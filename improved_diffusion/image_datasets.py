@@ -99,6 +99,8 @@ class ImageDataset(Dataset):
         crop_x = (arr.shape[1] - self.resolution) // 2
         arr = arr[crop_y : crop_y + self.resolution, crop_x : crop_x + self.resolution]
         arr = arr.astype(np.float32) / 127.5 - 1
+        # print(arr)
+        # print(arr.shape)
 
         out_dict = {}
         if self.local_classes is not None:

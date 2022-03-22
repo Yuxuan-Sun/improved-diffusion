@@ -45,8 +45,7 @@ class TrainLoop:
         schedule_sampler=None,
         weight_decay=0.0,
         lr_anneal_steps=0,
-        data_h5,
-        bed,
+        writer=None,
     ):
         self.model = model
         self.diffusion = diffusion
@@ -76,6 +75,8 @@ class TrainLoop:
         self.master_params = self.model_params
         self.lg_loss_scale = INITIAL_LOG_LOSS_SCALE
         self.sync_cuda = th.cuda.is_available()
+
+        self.writer = writer
 
         self._load_and_sync_parameters()
         if self.use_fp16:
@@ -168,6 +169,7 @@ class TrainLoop:
         ):
             batch, cond = next(self.data)
             print("batch", batch.shape)
+            print("cond", cond)
             self.run_step(batch, cond)
             if self.step % self.log_interval == 0:
                 logger.dumpkvs()
@@ -191,10 +193,16 @@ class TrainLoop:
 
     def forward_backward(self, batch, cond):
         zero_grad(self.model_params)
-        print("batchshape",batch.shape)
-        print("batchshape0",batch.shape[0])
-        print("microbatch",self.microbatch)
-        print("model",self.model)
+        # print("batchshape",batch.shape)
+        # print("batchshape",batch.shape[0]) #8
+        # print("microbatch",self.microbatch) #8
+        # print("model",self.model)
+
+        # batch = th.from_numpy(np.random.rand(2,3,32,32))
+        # print(batch)
+        # print("look at one")
+        # print(type(batch[0][0][0][0]))
+        # print(batch[0][0][0][0])
         for i in range(0, batch.shape[0], self.microbatch):
             # micro = batch[i : i + self.microbatch]
             micro = batch[i : i + self.microbatch].to(dist_util.dev())
@@ -218,6 +226,7 @@ class TrainLoop:
             else:
                 with self.ddp_model.no_sync():
                     losses = compute_losses()
+
 
             if isinstance(self.schedule_sampler, LossAwareSampler):
                 self.schedule_sampler.update_with_local_losses(

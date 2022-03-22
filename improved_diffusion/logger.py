@@ -443,6 +443,8 @@ def configure(dir=None, format_strs=None, comm=None, log_suffix=""):
     """
     If comm is provided, average all numerical stats across that comm
     """
+    if dir is not None:
+        dir = os.path.join(os.getenv("OPENAI_LOGDIR"), dir)
     if dir is None:
         dir = os.getenv("OPENAI_LOGDIR")
     if dir is None:

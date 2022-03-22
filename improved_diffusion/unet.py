@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 import math
+import this
 
 import numpy as np
 import torch as th
@@ -20,7 +21,11 @@ from .nn import (
 )
 
 # kernel = 3
+# kernel = (5,1)
 kernel = (1,5)
+# PADDING = 1
+# PADDING = (2,0)
+PADDING = (0,2)
 
 
 class TimestepBlock(nn.Module):
@@ -145,7 +150,8 @@ class ResBlock(TimestepBlock):
         self.in_layers = nn.Sequential(
             normalization(channels),
             SiLU(),
-            conv_nd(dims, channels, self.out_channels, kernel, padding=1),
+            conv_nd(dims, channels, self.out_channels, kernel, padding=PADDING),
+            # conv_nd(dims, channels, self.out_channels, kernel, padding=(2,0))
         )
         self.emb_layers = nn.Sequential(
             SiLU(),
@@ -159,7 +165,9 @@ class ResBlock(TimestepBlock):
             SiLU(),
             nn.Dropout(p=dropout),
             zero_module(
-                conv_nd(dims, self.out_channels, self.out_channels, kernel, padding=1)
+                conv_nd(dims, self.out_channels, self.out_channels, kernel, padding=PADDING)
+                # conv_nd(dims, self.out_channels, self.out_channels, kernel, padding=(2,0))
+
             ),
         )
 
@@ -185,18 +193,48 @@ class ResBlock(TimestepBlock):
         )
 
     def _forward(self, x, emb):
+        # print(self.in_layers)
+        # print("x before in_layers", x.shape)
+        # print(self.in_layers)
         h = self.in_layers(x)
+        # print("h after in layers", h.shape)
+
+        # print(self.emb_layers)
+        # print("emb before emb_layers", emb.shape)
         emb_out = self.emb_layers(emb).type(h.dtype)
+        # print("emb_out after emb_layers", emb_out.shape)
+        # print("original h")
+        # print(h.shape)
+        # print(len(h.shape))
+        # print("embd_out")
+        # print(emb_out.shape)
+        # print(len(emb_out.shape))
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
+            # print("while emb_out shape", emb_out.shape)
         if self.use_scale_shift_norm:
+            # print("if meets!")
+            # print("out_norm(0)", self.out_layers[0])
+            # print("out_rest(1:)", self.out_layers[1:])
             out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
             scale, shift = th.chunk(emb_out, 2, dim=1)
+            # print("scale", scale.shape)
+            # print("shift", shift.shape)
             h = out_norm(h) * (1 + scale) + shift
+            # print("h after out_norm", h.shape)
             h = out_rest(h)
+            # print("h after out_rest", h.shape)
         else:
+            # print("else meet!!")
             h = h + emb_out
+            # print(self.out_layers)
             h = self.out_layers(h)
+            # print("h after out_layers", h.shape)
+        # print("x!!!!!!!!!!")
+        # print(self.skip_connection(x).shape)
+        # print("h!!!!!!!!!!")
+        # print(h.shape)
+        # return
         return self.skip_connection(x) + h
 
 
@@ -484,11 +522,28 @@ class UNetModel(nn.Module):
 
         h = x.type(self.inner_dtype)
         for module in self.input_blocks:
+            print("before module, h", h.shape)
+            print("before module, emb", emb.shape)
             h = module(h, emb)
+            if h.shape[2] == 52: 
+                print("heyyyyyyyyyyyyyyyyyyyyyyy")
+                print("the hs causing trouble is:", h.shape)
+                print(module)
             hs.append(h)
+        print("middle block\n", self.middle_block)
+        print("before middle block",h.shape)
         h = self.middle_block(h, emb)
+        # print(self.output_blocks)
         for module in self.output_blocks:
-            cat_in = th.cat([h, hs.pop()], dim=1)
+            hsTensor = hs.pop()
+            print("h")
+            print(h.shape)
+            print("hssss")
+            print(hsTensor.shape)
+            cat_in = th.cat([h, hsTensor], dim=1)
+            print("cat_in", cat_in)
+            print("emb", emb)
+            print("module(cat_in,emb)", module)
             h = module(cat_in, emb)
         h = h.type(x.dtype)
         return self.out(h)
